@@ -14,18 +14,34 @@ const submitButton = document.querySelector("#submit-button");
 const reloadButton = document.querySelector("#reload-button");
 const statusFilter = document.querySelector("#status-filter");
 const taskList = document.querySelector("#task-list");
+const PROJECT_ID = 1;
 
 function describeError(error) {
   if (error instanceof ApiError) {
-    return `Serwer odrzucił żądanie (${error.status}): ${error.message}`;
+    const mainMessage = `Serwer odrzucił żądanie (${error.status}): ${error.message}`;
+
+    if (error.errors && error.errors.length > 0) {
+      const details = error.errors
+        .map((item) => `${item.field}: ${item.message}`)
+        .join("\n");
+
+      return `${mainMessage}\n${details}`;
+    }
+
+    return mainMessage;
   }
+
   return "Brak połączenia z API. Sprawdź, czy serwer działa.";
 }
+
 
 async function loadTasks() {
   showListLoading();
   try {
-    const { items, totalHeader } = await fetchTasks(statusFilter.value);
+    const { items, totalHeader } = await fetchTasks({
+      projectId: PROJECT_ID,
+      status: statusFilter.value,
+    });
     renderTasks(items);
     renderTotal(totalHeader);
     hideListStatus();
@@ -41,6 +57,7 @@ form.addEventListener("submit", async (event) => {
   submitButton.disabled = true;
   try {
     await createTask({
+      project_id: PROJECT_ID,
       title: data.get("title"),
       priority: data.get("priority"),
     });

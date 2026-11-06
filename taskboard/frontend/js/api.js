@@ -1,29 +1,32 @@
 const API_URL = "http://127.0.0.1:8000";
 
 export class ApiError extends Error {
-  constructor(status, message) {
+  constructor(status, message, errors = []) {
     super(message);
     this.status = status;
+    this.errors = errors;
   }
 }
 
 async function request(path, options = {}) {
   const response = await fetch(`${API_URL}${path}`, options);
   if (!response.ok) {
-    const body = await response.json().catch(() => null);
-    const detail = typeof body?.detail === "string" ? body.detail : response.statusText;
-    throw new ApiError(response.status, detail);
+    const problem = await response.json().catch(() => null);
+    throw new ApiError(
+      response.status,
+      problem?.detail ?? response.statusText,
+      problem?.errors ?? [],
+    );
   }
   return response;
 }
 
-export async function fetchTasks(status) {
-  const params = new URLSearchParams();
+export async function fetchTasks({ projectId, status }) {
+  const params = new URLSearchParams({ project_id: projectId });
   if (status) {
     params.set("status", status);
   }
-  const query = params.toString();
-  const response = await request(query ? `/tasks?${query}` : "/tasks");
+  const response = await request(`/tasks?${params}`);
   const data = await response.json();
   return {
     items: data.items,
